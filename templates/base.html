@@ -32,6 +32,7 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center space-x-8">
                     <a href="/" class="text-2xl font-bold text-accent">MovieSpace</a>
+                    <!-- Desktop Navigation -->
                     <div class="hidden md:flex space-x-4">
                         <a href="/" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Home</a>
                         <a href="/search" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Zoeken</a>
@@ -42,17 +43,58 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
+                    <!-- Desktop Auth Buttons -->
+                    <div class="hidden md:flex items-center space-x-4">
+                        {% if user %}
+                            <span class="text-gray-400">Welkom, {{ user.username }}!</span>
+                            <a href="/logout" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">Uitloggen</a>
+                        {% else %}
+                            <a href="/login" class="bg-accent hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium">Inloggen</a>
+                            <a href="/register" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">Registreren</a>
+                        {% endif %}
+                    </div>
+                    <!-- Mobile Menu Button -->
+                    <button id="mobileMenuBtn" class="md:hidden text-gray-300 hover:text-white p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <!-- Mobile Menu -->
+            <div id="mobileMenu" class="hidden md:hidden pb-4">
+                <div class="flex flex-col space-y-2">
+                    <a href="/" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Home</a>
+                    <a href="/search" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Zoeken</a>
                     {% if user %}
-                        <span class="text-gray-400">Welkom, {{ user.username }}!</span>
-                        <a href="/logout" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">Uitloggen</a>
+                    <a href="/lists" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Lijsten</a>
+                    <a href="/profile" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Profiel</a>
+                    <div class="border-t border-gray-600 pt-2 mt-2">
+                        <span class="text-gray-400 px-3 py-2 block text-sm">{{ user.username }}</span>
+                        <a href="/logout" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm font-medium block text-center">Uitloggen</a>
+                    </div>
                     {% else %}
-                        <a href="/login" class="bg-accent hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium">Inloggen</a>
-                        <a href="/register" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">Registreren</a>
+                    <div class="border-t border-gray-600 pt-2 mt-2 space-y-2">
+                        <a href="/login" class="bg-accent hover:bg-green-600 text-white px-3 py-2 rounded-md text-sm font-medium block text-center">Inloggen</a>
+                        <a href="/register" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-medium block text-center">Registreren</a>
+                    </div>
                     {% endif %}
                 </div>
             </div>
         </div>
     </nav>
+
+    <script>
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+
+        if (mobileMenuBtn && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+        }
+    </script>
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
