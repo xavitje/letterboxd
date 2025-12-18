@@ -28,6 +28,7 @@ templates = Jinja2Templates(directory="templates")
 
 # TMDB API Configuration
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+print(TMDB_API_KEY)
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500"
 
