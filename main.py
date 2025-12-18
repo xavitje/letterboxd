@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Depends, HTTPException, status, Form, UploadFile, File
+from fastapi import FastAPI, Request, Depends, HTTPException, status, Form, UploadFile, File, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -713,15 +713,111 @@ async def import_page(request: Request, db: Session = Depends(get_db)):
     })
 
 
+def process_import_background(csv_data: list, import_type: str, target: str, user_id: int, custom_list_id: int = None):
+    """Achtergrond taak voor het importeren van films"""
+    from models import get_db
+
+    db = next(get_db())
+
+    imported_count = 0
+    skipped_count = 0
+    error_count = 0
+    batch_size = 20
+    batch_count = 0
+
+    try:
+        for idx, row in enumerate(csv_data):
+            try:
+                title = None
+                year = None
+
+                if import_type == 'letterboxd':
+                    title = row.get('Name')
+                    year = row.get('Year')
+                elif import_type == 'imdb':
+                    title = row.get('Title') or row.get('title')
+                    year = row.get('Year') or row.get('year')
+
+                if not title:
+                    skipped_count += 1
+                    continue
+
+                # Search movie on TMDB
+                search_query = f"{title} {year}" if year else title
+                search_results = tmdb_request("/search/movie", {"query": search_query})
+
+                if not search_results or not search_results.get('results'):
+                    skipped_count += 1
+                    continue
+
+                # Take first result
+                movie = search_results['results'][0]
+                movie_id = movie['id']
+
+                # Find or create movie item
+                movie_item = db.query(MovieItem).filter(MovieItem.tmdb_id == movie_id).first()
+                if not movie_item:
+                    movie_item = MovieItem(
+                        tmdb_id=movie_id,
+                        title=movie['title'],
+                        poster_path=movie.get('poster_path')
+                    )
+                    db.add(movie_item)
+                    db.flush()
+
+                # Check if already exists
+                existing = db.query(UserMovie).filter(
+                    UserMovie.user_id == user_id,
+                    UserMovie.movie_id == movie_item.id,
+                    UserMovie.status == target if target in ['watchlist', 'watched'] else 'custom',
+                    UserMovie.custom_list_id == custom_list_id
+                ).first()
+
+                if not existing:
+                    user_movie = UserMovie(
+                        user_id=user_id,
+                        movie_id=movie_item.id,
+                        status=target if target in ['watchlist', 'watched'] else 'custom',
+                        custom_list_id=custom_list_id
+                    )
+                    db.add(user_movie)
+                    imported_count += 1
+                else:
+                    skipped_count += 1
+
+                # Batch commit elke 20 items
+                batch_count += 1
+                if batch_count >= batch_size:
+                    db.commit()
+                    batch_count = 0
+
+            except Exception as e:
+                error_count += 1
+                print(f"Error importing '{title}': {str(e)}")
+                continue
+
+        # Final commit voor resterende items
+        db.commit()
+
+        print(f"Import voltooid: {imported_count} geïmporteerd, {skipped_count} overgeslagen, {error_count} errors")
+
+    except Exception as e:
+        print(f"Fatal error in background import: {str(e)}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 @app.post("/import/csv")
 async def import_csv(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    import_type: str = Form(...),  # 'letterboxd' or 'imdb'
-    target: str = Form(...),  # 'watchlist', 'watched', or list_id
+    import_type: str = Form(...),
+    target: str = Form(...),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user_required)
 ):
-    """Import CSV bestand (Letterboxd of IMDb) - Geoptimaliseerd voor grote bestanden"""
+    """Import CSV bestand (Letterboxd of IMDb) - Asynchroon via background task"""
 
     # Read CSV file
     contents = await file.read()
@@ -729,110 +825,33 @@ async def import_csv(
     csv_reader = list(csv.DictReader(io.StringIO(text)))
 
     total_rows = len(csv_reader)
-    imported_count = 0
-    skipped_count = 0
-    error_count = 0
 
-    # Limit voor veiligheid (pas aan indien nodig)
-    MAX_IMPORT = 1000
+    # Limit voor veiligheid
+    MAX_IMPORT = 2000
     if total_rows > MAX_IMPORT:
         raise HTTPException(
             status_code=400,
             detail=f"Te veel films ({total_rows}). Maximum is {MAX_IMPORT}. Split je lijst op in kleinere bestanden."
         )
 
-    # Determine target (watchlist, watched, or custom list)
+    # Determine target
     custom_list_id = None
-    status = target
     if target not in ['watchlist', 'watched']:
         custom_list_id = int(target)
-        status = 'custom'
 
-    # Batch processing - commit elke 20 films voor betere performance
-    batch_size = 20
-    batch_count = 0
+    # Start background task
+    background_tasks.add_task(
+        process_import_background,
+        csv_reader,
+        import_type,
+        target,
+        user.id,
+        custom_list_id
+    )
 
-    for idx, row in enumerate(csv_reader):
-        try:
-            title = None
-            year = None
+    # Redirect immediately with processing message
+    message = f"Import gestart voor {total_rows} films. Dit kan enkele minuten duren. Ververs de pagina om resultaten te zien."
 
-            if import_type == 'letterboxd':
-                title = row.get('Name')
-                year = row.get('Year')
-            elif import_type == 'imdb':
-                title = row.get('Title') or row.get('title')
-                year = row.get('Year') or row.get('year')
-
-            if not title:
-                skipped_count += 1
-                continue
-
-            # Search movie on TMDB
-            search_query = f"{title} {year}" if year else title
-            search_results = tmdb_request("/search/movie", {"query": search_query})
-
-            if not search_results or not search_results.get('results'):
-                skipped_count += 1
-                continue
-
-            # Take first result
-            movie = search_results['results'][0]
-            movie_id = movie['id']
-
-            # Find or create movie item
-            movie_item = db.query(MovieItem).filter(MovieItem.tmdb_id == movie_id).first()
-            if not movie_item:
-                movie_item = MovieItem(
-                    tmdb_id=movie_id,
-                    title=movie['title'],
-                    poster_path=movie.get('poster_path')
-                )
-                db.add(movie_item)
-                db.flush()  # Flush zonder commit voor snelheid
-
-            # Check if already exists
-            existing = db.query(UserMovie).filter(
-                UserMovie.user_id == user.id,
-                UserMovie.movie_id == movie_item.id,
-                UserMovie.status == status,
-                UserMovie.custom_list_id == custom_list_id
-            ).first()
-
-            if not existing:
-                user_movie = UserMovie(
-                    user_id=user.id,
-                    movie_id=movie_item.id,
-                    status=status,
-                    custom_list_id=custom_list_id
-                )
-                db.add(user_movie)
-                imported_count += 1
-            else:
-                skipped_count += 1
-
-            # Batch commit elke 20 items
-            batch_count += 1
-            if batch_count >= batch_size:
-                db.commit()
-                batch_count = 0
-
-        except Exception as e:
-            error_count += 1
-            print(f"Error importing '{title}': {str(e)}")
-            continue
-
-    # Final commit voor resterende items
-    db.commit()
-
-    # Build success message
-    message = f"{imported_count} films geïmporteerd"
-    if skipped_count > 0:
-        message += f", {skipped_count} overgeslagen"
-    if error_count > 0:
-        message += f", {error_count} errors"
-
-    # Redirect back with success message
     if custom_list_id:
         return RedirectResponse(url=f"/lists/{custom_list_id}?msg={message}", status_code=303)
     else:
