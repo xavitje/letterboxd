@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  moviespace:
+    build: .
+    container_name: moviespace
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+    environment:
+      - DATABASE_URL=sqlite:////app/data/moviespace.db
+    networks:
+      - moviespace-network
+
+networks:
+  moviespace-network:
+    driver: bridge
