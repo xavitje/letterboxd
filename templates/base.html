@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="nl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MovieSpace{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#14181c',
+                        'secondary': '#1f2937',
+                        'accent': '#00e054',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #14181c;
+        }
+    </style>
+</head>
+<body class="bg-primary text-gray-200">
+    <!-- Navigation Bar -->
+    <nav class="bg-secondary border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <a href="/" class="text-2xl font-bold text-accent">MovieSpace</a>
+                    <div class="hidden md:flex space-x-4">
+                        <a href="/" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Home</a>
+                        <a href="/search" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Zoeken</a>
+                        {% if user %}
+                        <a href="/lists" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Lijsten</a>
+                        <a href="/profile" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Profiel</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {% if user %}
+                        <span class="text-gray-400">Welkom, {{ user.username }}!</span>
+                        <a href="/logout" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">Uitloggen</a>
+                    {% else %}
+                        <a href="/login" class="bg-accent hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium">Inloggen</a>
+                        <a href="/register" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">Registreren</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-secondary border-t border-gray-700 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <p class="text-center text-gray-400 text-sm">
+                &copy; 2025 MovieSpace. Powered by TMDB API.
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

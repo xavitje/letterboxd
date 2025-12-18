@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}{{ movie.title }} - MovieSpace{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Movie Header -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- Poster -->
+        <div class="md:col-span-1">
+            {% if movie.poster_path %}
+            <img src="{{ image_base_url }}{{ movie.poster_path }}"
+                 alt="{{ movie.title }}"
+                 class="w-full rounded-lg shadow-2xl">
+            {% else %}
+            <div class="w-full h-96 bg-gray-800 rounded-lg flex items-center justify-center">
+                <span class="text-gray-500">Geen poster</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Movie Info -->
+        <div class="md:col-span-2 space-y-6">
+            <div>
+                <h1 class="text-4xl font-bold text-white mb-2">{{ movie.title }}</h1>
+                {% if movie.tagline %}
+                <p class="text-xl text-gray-400 italic">"{{ movie.tagline }}"</p>
+                {% endif %}
+            </div>
+
+            <!-- Rating & Details -->
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="flex items-center space-x-2">
+                    <span class="text-yellow-400 text-2xl">⭐</span>
+                    <span class="text-2xl font-bold text-white">{{ movie.vote_average|round(1) }}</span>
+                    <span class="text-gray-400">/10</span>
+                </div>
+                {% if movie.release_date %}
+                <span class="text-gray-400">📅 {{ movie.release_date }}</span>
+                {% endif %}
+                {% if movie.runtime %}
+                <span class="text-gray-400">⏱️ {{ movie.runtime }} min</span>
+                {% endif %}
+            </div>
+
+            <!-- Genres -->
+            {% if movie.genres %}
+            <div class="flex flex-wrap gap-2">
+                {% for genre in movie.genres %}
+                <span class="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-sm">{{ genre.name }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Overview -->
+            <div>
+                <h2 class="text-2xl font-bold text-white mb-3">Verhaal</h2>
+                <p class="text-gray-300 leading-relaxed">{{ movie.overview or "Geen beschrijving beschikbaar." }}</p>
+            </div>
+
+            <!-- Add to List (Only for logged in users) -->
+            {% if user %}
+            <div class="bg-secondary p-6 rounded-lg">
+                <h3 class="text-xl font-bold text-white mb-4">Voeg toe aan jouw lijst</h3>
+                <div class="flex flex-wrap gap-3 mb-4">
+                    {% if user_status %}
+                    <form method="post" action="/movie/{{ movie.id }}/remove-from-list" class="inline">
+                        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                            ❌ Verwijder van lijst (huidige: {{ user_status }})
+                        </button>
+                    </form>
+                    {% endif %}
+                    <form method="post" action="/movie/{{ movie.id }}/add-to-list" class="inline">
+                        <input type="hidden" name="status" value="watchlist">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                            📋 Watchlist
+                        </button>
+                    </form>
+                    <form method="post" action="/movie/{{ movie.id }}/add-to-list" class="inline">
+                        <input type="hidden" name="status" value="watched">
+                        <button type="submit" class="bg-accent hover:bg-green-600 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                            ✅ Gekeken
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Custom Lists -->
+                {% if custom_lists %}
+                <div class="border-t border-gray-600 pt-4">
+                    <h4 class="text-sm font-medium text-gray-400 mb-3">Voeg toe aan eigen lijst:</h4>
+                    <div class="flex flex-wrap gap-2">
+                        {% for list in custom_lists %}
+                        <form method="post" action="/lists/{{ list.id }}/add-movie/{{ movie.id }}" class="inline">
+                            <button type="submit" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors">
+                                📂 {{ list.name }}
+                            </button>
+                        </form>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="border-t border-gray-600 pt-4">
+                    <p class="text-gray-400 text-sm">
+                        <a href="/lists" class="text-accent hover:underline">Maak een eigen lijst</a> om films te organiseren
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="bg-secondary p-6 rounded-lg">
+                <p class="text-gray-300">
+                    <a href="/login" class="text-accent hover:underline">Log in</a> om deze film toe te voegen aan jouw lijst!
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Trailer -->
+    {% if trailer %}
+    <div class="bg-secondary p-6 rounded-lg">
+        <h2 class="text-2xl font-bold text-white mb-4">🎬 Trailer</h2>
+        <div class="aspect-w-16 aspect-h-9">
+            <iframe
+                class="w-full h-96 rounded-lg"
+                src="https://www.youtube.com/embed/{{ trailer }}"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen>
+            </iframe>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Add Review (Only for logged in users) -->
+    {% if user %}
+    <div class="bg-secondary p-6 rounded-lg">
+        <h2 class="text-2xl font-bold text-white mb-4">✍️ Schrijf een Review</h2>
+        <form method="post" action="/movie/{{ movie.id }}/review" class="space-y-4">
+            <div>
+                <label for="rating" class="block text-sm font-medium text-gray-300 mb-2">
+                    Rating (1-10)
+                </label>
+                <input type="number"
+                       name="rating"
+                       id="rating"
+                       min="1"
+                       max="10"
+                       step="0.5"
+                       required
+                       class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-accent">
+            </div>
+            <div>
+                <label for="review_text" class="block text-sm font-medium text-gray-300 mb-2">
+                    Review (optioneel)
+                </label>
+                <textarea name="review_text"
+                          id="review_text"
+                          rows="4"
+                          class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-accent"></textarea>
+            </div>
+            <button type="submit"
+                    class="bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-md font-medium transition-colors">
+                Review Plaatsen
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- User Reviews -->
+    {% if reviews %}
+    <div class="bg-secondary p-6 rounded-lg">
+        <h2 class="text-2xl font-bold text-white mb-6">💬 Gebruikersreviews ({{ reviews|length }})</h2>
+        <div class="space-y-4">
+            {% for review in reviews %}
+            <div class="bg-gray-700 p-4 rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-semibold text-white">{{ review.user.username }}</span>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-yellow-400">⭐ {{ review.rating }}/10</span>
+                        <span class="text-gray-400 text-sm">{{ review.created_at.strftime('%d-%m-%Y') }}</span>
+                    </div>
+                </div>
+                {% if review.review_text %}
+                <p class="text-gray-300">{{ review.review_text }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

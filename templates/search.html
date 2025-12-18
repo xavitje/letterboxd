@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Zoeken - MovieSpace{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <h1 class="text-4xl font-bold text-white">🔍 Zoek & Filter Films</h1>
+
+    <!-- Search & Filter Form -->
+    <div class="bg-secondary p-6 rounded-lg shadow-lg">
+        <form method="get" action="/search" class="space-y-4">
+            <!-- Text Search -->
+            <div>
+                <label for="query" class="block text-sm font-medium text-gray-300 mb-2">Zoek op titel</label>
+                <input type="text"
+                       name="query"
+                       id="query"
+                       value="{{ query }}"
+                       placeholder="Bijv. Inception, The Matrix..."
+                       class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent">
+            </div>
+
+            <!-- Filters Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Genre Filter -->
+                <div>
+                    <label for="genre" class="block text-sm font-medium text-gray-300 mb-2">Genre</label>
+                    <select name="genre"
+                            id="genre"
+                            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-accent">
+                        <option value="">Alle genres</option>
+                        {% for g in genres %}
+                        <option value="{{ g.id }}" {% if selected_genre == g.id|string %}selected{% endif %}>
+                            {{ g.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Year Filter -->
+                <div>
+                    <label for="year" class="block text-sm font-medium text-gray-300 mb-2">Jaar</label>
+                    <input type="number"
+                           name="year"
+                           id="year"
+                           value="{{ selected_year }}"
+                           placeholder="Bijv. 2024"
+                           min="1900"
+                           max="2025"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent">
+                </div>
+
+                <!-- Language Filter -->
+                <div>
+                    <label for="language" class="block text-sm font-medium text-gray-300 mb-2">Taal</label>
+                    <select name="language"
+                            id="language"
+                            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-accent">
+                        <option value="">Alle talen</option>
+                        <option value="en" {% if selected_language == 'en' %}selected{% endif %}>Engels</option>
+                        <option value="nl" {% if selected_language == 'nl' %}selected{% endif %}>Nederlands</option>
+                        <option value="fr" {% if selected_language == 'fr' %}selected{% endif %}>Frans</option>
+                        <option value="de" {% if selected_language == 'de' %}selected{% endif %}>Duits</option>
+                        <option value="es" {% if selected_language == 'es' %}selected{% endif %}>Spaans</option>
+                        <option value="ja" {% if selected_language == 'ja' %}selected{% endif %}>Japans</option>
+                        <option value="ko" {% if selected_language == 'ko' %}selected{% endif %}>Koreaans</option>
+                    </select>
+                </div>
+
+                <!-- Sort Filter -->
+                <div>
+                    <label for="sort_by" class="block text-sm font-medium text-gray-300 mb-2">Sorteer op</label>
+                    <select name="sort_by"
+                            id="sort_by"
+                            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-accent">
+                        <option value="popularity.desc" {% if selected_sort == 'popularity.desc' %}selected{% endif %}>Populariteit (Hoog-Laag)</option>
+                        <option value="popularity.asc" {% if selected_sort == 'popularity.asc' %}selected{% endif %}>Populariteit (Laag-Hoog)</option>
+                        <option value="release_date.desc" {% if selected_sort == 'release_date.desc' %}selected{% endif %}>Release Datum (Nieuw-Oud)</option>
+                        <option value="release_date.asc" {% if selected_sort == 'release_date.asc' %}selected{% endif %}>Release Datum (Oud-Nieuw)</option>
+                        <option value="vote_average.desc" {% if selected_sort == 'vote_average.desc' %}selected{% endif %}>Beoordeling (Hoog-Laag)</option>
+                        <option value="vote_average.asc" {% if selected_sort == 'vote_average.asc' %}selected{% endif %}>Beoordeling (Laag-Hoog)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex space-x-4">
+                <button type="submit"
+                        class="bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-md font-medium transition-colors">
+                    Zoeken
+                </button>
+                <a href="/search"
+                   class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-md font-medium transition-colors">
+                    Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results -->
+    {% if movies %}
+    <div>
+        <h2 class="text-2xl font-bold text-white mb-4">
+            Resultaten ({{ movies|length }})
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {% for movie in movies %}
+            <a href="/movie/{{ movie.id }}" class="group">
+                <div class="relative overflow-hidden rounded-lg shadow-lg transition-transform duration-300 group-hover:scale-105">
+                    {% if movie.poster_path %}
+                    <img src="{{ image_base_url }}{{ movie.poster_path }}"
+                         alt="{{ movie.title }}"
+                         class="w-full h-auto">
+                    {% else %}
+                    <div class="w-full h-96 bg-gray-800 flex items-center justify-center">
+                        <span class="text-gray-500 text-center p-4">Geen poster</span>
+                    </div>
+                    {% endif %}
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div class="absolute bottom-0 left-0 right-0 p-4">
+                            <h3 class="text-white font-semibold text-sm truncate">{{ movie.title }}</h3>
+                            <div class="flex items-center justify-between mt-1">
+                                <span class="text-yellow-400 text-sm">⭐ {{ movie.vote_average|round(1) }}</span>
+                                {% if movie.release_date %}
+                                <span class="text-gray-300 text-xs">{{ movie.release_date[:4] }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% elif has_criteria %}
+    <div class="text-center py-12">
+        <p class="text-gray-400 text-lg">Geen films gevonden met deze criteria.</p>
+        <button onclick="window.location.href='/search'" class="mt-4 bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-md">
+            Filters Wissen
+        </button>
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <p class="text-gray-400 text-lg">Klik op "Zoeken" om populaire films te zien, of pas de filters aan!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Registreren - MovieSpace{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <div class="bg-secondary p-8 rounded-lg shadow-lg">
+        <h1 class="text-3xl font-bold text-white mb-6 text-center">🚀 Registreren</h1>
+
+        {% if error %}
+        <div class="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded mb-4">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post" action="/register" class="space-y-6">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-300 mb-2">
+                    Gebruikersnaam
+                </label>
+                <input type="text"
+                       name="username"
+                       id="username"
+                       required
+                       minlength="3"
+                       class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent">
+            </div>
+
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-300 mb-2">
+                    Email
+                </label>
+                <input type="email"
+                       name="email"
+                       id="email"
+                       required
+                       class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent">
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-300 mb-2">
+                    Wachtwoord
+                </label>
+                <input type="password"
+                       name="password"
+                       id="password"
+                       required
+                       minlength="6"
+                       class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent">
+                <p class="text-gray-500 text-sm mt-1">Minimaal 6 karakters</p>
+            </div>
+
+            <button type="submit"
+                    class="w-full bg-accent hover:bg-green-600 text-white py-3 rounded-md font-medium transition-colors">
+                Account Aanmaken
+            </button>
+        </form>
+
+        <div class="mt-6 text-center">
+            <p class="text-gray-400">
+                Al een account?
+                <a href="/login" class="text-accent hover:underline">Log hier in</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

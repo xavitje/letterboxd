@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}{{ list.name }} - MovieSpace{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- List Header -->
+    <div class="bg-secondary p-6 rounded-lg">
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <h1 class="text-3xl font-bold text-white mb-2">{{ list.name }}</h1>
+                {% if list.description %}
+                <p class="text-gray-400 mb-4">{{ list.description }}</p>
+                {% endif %}
+                <p class="text-gray-500">{{ total_movies }} films • Pagina {{ current_page }} van {{ total_pages }}</p>
+            </div>
+            <div class="flex space-x-3">
+                <a href="/lists" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md transition-colors">
+                    ← Terug
+                </a>
+                <form method="post" action="/lists/{{ list.id }}/delete"
+                      onsubmit="return confirm('Weet je zeker dat je deze lijst wilt verwijderen?')">
+                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition-colors">
+                        🗑️ Verwijderen
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if request.query_params.get('imported') %}
+    <div class="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded">
+        ✅ {{ request.query_params.get('imported') }} films succesvol geïmporteerd!
+    </div>
+    {% endif %}
+
+    <!-- Movies Grid -->
+    {% if movies %}
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+        {% for movie in movies %}
+        <a href="/movie/{{ movie.id }}" class="group">
+            <div class="relative overflow-hidden rounded-lg shadow-lg transition-transform duration-300 group-hover:scale-105">
+                {% if movie.poster_path %}
+                <img src="{{ image_base_url }}{{ movie.poster_path }}"
+                     alt="{{ movie.title }}"
+                     class="w-full h-auto">
+                {% else %}
+                <div class="w-full h-96 bg-gray-800 flex items-center justify-center">
+                    <span class="text-gray-500">Geen poster</span>
+                </div>
+                {% endif %}
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div class="absolute bottom-0 left-0 right-0 p-4">
+                        <h3 class="text-white font-semibold text-sm truncate">{{ movie.title }}</h3>
+                        {% if movie.vote_average %}
+                        <span class="text-yellow-400 text-sm">⭐ {{ movie.vote_average|round(1) }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="flex items-center justify-center space-x-2">
+        {% if current_page > 1 %}
+        <a href="/lists/{{ list.id }}?page={{ current_page - 1 }}"
+           class="bg-secondary hover:bg-gray-700 text-white px-4 py-2 rounded-md transition-colors">
+            ← Vorige
+        </a>
+        {% endif %}
+
+        <div class="flex space-x-1">
+            {% for page_num in range(1, total_pages + 1) %}
+                {% if page_num == current_page %}
+                <span class="bg-accent text-white px-4 py-2 rounded-md font-bold">
+                    {{ page_num }}
+                </span>
+                {% elif page_num <= 3 or page_num > total_pages - 3 or (page_num >= current_page - 1 and page_num <= current_page + 1) %}
+                <a href="/lists/{{ list.id }}?page={{ page_num }}"
+                   class="bg-secondary hover:bg-gray-700 text-white px-4 py-2 rounded-md transition-colors">
+                    {{ page_num }}
+                </a>
+                {% elif page_num == 4 or page_num == total_pages - 3 %}
+                <span class="text-gray-400 px-2">...</span>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if current_page < total_pages %}
+        <a href="/lists/{{ list.id }}?page={{ current_page + 1 }}"
+           class="bg-secondary hover:bg-gray-700 text-white px-4 py-2 rounded-md transition-colors">
+            Volgende →
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="bg-secondary p-12 rounded-lg text-center">
+        <p class="text-gray-400 text-lg mb-4">Deze lijst is nog leeg.</p>
+        <a href="/search" class="inline-block bg-accent hover:bg-green-600 text-white px-6 py-3 rounded-md font-medium">
+            Voeg Films Toe
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

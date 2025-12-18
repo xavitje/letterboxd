@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Profiel - {{ user.username }} - MovieSpace{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    {% if request.query_params.get('imported') %}
+    <div class="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded">
+        ✅ {{ request.query_params.get('imported') }} films succesvol geïmporteerd!
+    </div>
+    {% endif %}
+
+    <!-- Profile Header -->
+    <div class="bg-secondary p-8 rounded-lg shadow-lg">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-6">
+                <div class="w-20 h-20 bg-accent rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                    {{ user.username[0]|upper }}
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-white">{{ user.username }}</h1>
+                    <p class="text-gray-400">{{ user.email }}</p>
+                    <p class="text-gray-500 text-sm mt-1">Lid sinds {{ user.created_at.strftime('%d-%m-%Y') }}</p>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <a href="/lists" class="bg-accent hover:bg-green-600 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                    📋 Mijn Lijsten
+                </a>
+                <a href="/import" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                    📥 Importeer
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Watchlist Section -->
+    <section>
+        <h2 class="text-2xl font-bold text-white mb-4 flex items-center">
+            📋 Mijn Watchlist
+            <span class="ml-3 text-lg text-gray-400">({{ watchlist|length }})</span>
+        </h2>
+        {% if watchlist %}
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {% for movie in watchlist %}
+            <a href="/movie/{{ movie.id }}" class="group">
+                <div class="relative overflow-hidden rounded-lg shadow-lg transition-transform duration-300 group-hover:scale-105">
+                    {% if movie.poster_path %}
+                    <img src="{{ image_base_url }}{{ movie.poster_path }}"
+                         alt="{{ movie.title }}"
+                         class="w-full h-auto">
+                    {% else %}
+                    <div class="w-full h-96 bg-gray-800 flex items-center justify-center">
+                        <span class="text-gray-500">Geen poster</span>
+                    </div>
+                    {% endif %}
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div class="absolute bottom-0 left-0 right-0 p-4">
+                            <h3 class="text-white font-semibold text-sm truncate">{{ movie.title }}</h3>
+                            <span class="text-yellow-400 text-sm">⭐ {{ movie.vote_average|round(1) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-secondary p-8 rounded-lg text-center">
+            <p class="text-gray-400">Je watchlist is nog leeg. Begin met het toevoegen van films!</p>
+            <a href="/search" class="inline-block mt-4 bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-md font-medium">
+                Ontdek Films
+            </a>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Watched Section -->
+    <section>
+        <h2 class="text-2xl font-bold text-white mb-4 flex items-center">
+            ✅ Gekeken
+            <span class="ml-3 text-lg text-gray-400">({{ watched|length }})</span>
+        </h2>
+        {% if watched %}
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {% for movie in watched %}
+            <a href="/movie/{{ movie.id }}" class="group">
+                <div class="relative overflow-hidden rounded-lg shadow-lg transition-transform duration-300 group-hover:scale-105">
+                    {% if movie.poster_path %}
+                    <img src="{{ image_base_url }}{{ movie.poster_path }}"
+                         alt="{{ movie.title }}"
+                         class="w-full h-auto">
+                    {% else %}
+                    <div class="w-full h-96 bg-gray-800 flex items-center justify-center">
+                        <span class="text-gray-500">Geen poster</span>
+                    </div>
+                    {% endif %}
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div class="absolute bottom-0 left-0 right-0 p-4">
+                            <h3 class="text-white font-semibold text-sm truncate">{{ movie.title }}</h3>
+                            <span class="text-yellow-400 text-sm">⭐ {{ movie.vote_average|round(1) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-secondary p-8 rounded-lg text-center">
+            <p class="text-gray-400">Je hebt nog geen films als gekeken gemarkeerd.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Reviews Section -->
+    <section>
+        <h2 class="text-2xl font-bold text-white mb-4 flex items-center">
+            ✍️ Mijn Reviews
+            <span class="ml-3 text-lg text-gray-400">({{ reviews|length }})</span>
+        </h2>
+        {% if reviews %}
+        <div class="space-y-4">
+            {% for item in reviews %}
+            <div class="bg-secondary p-6 rounded-lg shadow-lg">
+                <div class="flex gap-6">
+                    <!-- Movie Poster -->
+                    <a href="/movie/{{ item.movie.id }}" class="flex-shrink-0">
+                        {% if item.movie.poster_path %}
+                        <img src="{{ image_base_url }}{{ item.movie.poster_path }}"
+                             alt="{{ item.movie.title }}"
+                             class="w-24 h-36 object-cover rounded-lg">
+                        {% else %}
+                        <div class="w-24 h-36 bg-gray-800 rounded-lg flex items-center justify-center">
+                            <span class="text-gray-500 text-xs">Geen poster</span>
+                        </div>
+                        {% endif %}
+                    </a>
+
+                    <!-- Review Content -->
+                    <div class="flex-1">
+                        <div class="flex items-start justify-between mb-2">
+                            <div>
+                                <a href="/movie/{{ item.movie.id }}" class="text-xl font-bold text-white hover:text-accent">
+                                    {{ item.movie.title }}
+                                </a>
+                                {% if item.movie.release_date %}
+                                <span class="text-gray-400 text-sm ml-2">({{ item.movie.release_date[:4] }})</span>
+                                {% endif %}
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-yellow-400 font-bold">⭐ {{ item.review.rating }}/10</span>
+                            </div>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-2">{{ item.review.created_at.strftime('%d-%m-%Y om %H:%M') }}</p>
+                        {% if item.review.review_text %}
+                        <p class="text-gray-300">{{ item.review.review_text }}</p>
+                        {% else %}
+                        <p class="text-gray-500 italic">Geen geschreven review</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-secondary p-8 rounded-lg text-center">
+            <p class="text-gray-400">Je hebt nog geen reviews geschreven.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
