@@ -721,15 +721,25 @@ async def import_csv(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user_required)
 ):
-    """Import CSV bestand (Letterboxd of IMDb)"""
+    """Import CSV bestand (Letterboxd of IMDb) - Geoptimaliseerd voor grote bestanden"""
 
     # Read CSV file
     contents = await file.read()
     text = contents.decode('utf-8')
-    csv_reader = csv.DictReader(io.StringIO(text))
+    csv_reader = list(csv.DictReader(io.StringIO(text)))
 
+    total_rows = len(csv_reader)
     imported_count = 0
-    errors = []
+    skipped_count = 0
+    error_count = 0
+
+    # Limit voor veiligheid (pas aan indien nodig)
+    MAX_IMPORT = 1000
+    if total_rows > MAX_IMPORT:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Te veel films ({total_rows}). Maximum is {MAX_IMPORT}. Split je lijst op in kleinere bestanden."
+        )
 
     # Determine target (watchlist, watched, or custom list)
     custom_list_id = None
@@ -738,114 +748,95 @@ async def import_csv(
         custom_list_id = int(target)
         status = 'custom'
 
-    for row in csv_reader:
+    # Batch processing - commit elke 20 films voor betere performance
+    batch_size = 20
+    batch_count = 0
+
+    for idx, row in enumerate(csv_reader):
         try:
+            title = None
+            year = None
+
             if import_type == 'letterboxd':
-                # Letterboxd format: Date, Name, Year, Letterboxd URI
                 title = row.get('Name')
                 year = row.get('Year')
-
-                if not title:
-                    continue
-
-                # Search movie on TMDB
-                search_query = f"{title} {year}" if year else title
-                search_results = tmdb_request(
-                    "/search/movie", {"query": search_query})
-
-                if search_results and search_results.get('results'):
-                    # Take first result
-                    movie = search_results['results'][0]
-                    movie_id = movie['id']
-
-                    # Find or create movie item
-                    movie_item = db.query(MovieItem).filter(
-                        MovieItem.tmdb_id == movie_id).first()
-                    if not movie_item:
-                        movie_item = MovieItem(
-                            tmdb_id=movie_id,
-                            title=movie['title'],
-                            poster_path=movie.get('poster_path')
-                        )
-                        db.add(movie_item)
-                        db.commit()
-                        db.refresh(movie_item)
-
-                    # Check if already exists
-                    existing = db.query(UserMovie).filter(
-                        UserMovie.user_id == user.id,
-                        UserMovie.movie_id == movie_item.id,
-                        UserMovie.status == status,
-                        UserMovie.custom_list_id == custom_list_id
-                    ).first()
-
-                    if not existing:
-                        user_movie = UserMovie(
-                            user_id=user.id,
-                            movie_id=movie_item.id,
-                            status=status,
-                            custom_list_id=custom_list_id
-                        )
-                        db.add(user_movie)
-                        imported_count += 1
-
             elif import_type == 'imdb':
-                # IMDb format: Const, Your Rating, Date Rated, Title, URL, etc.
                 title = row.get('Title') or row.get('title')
+                year = row.get('Year') or row.get('year')
 
-                if not title:
-                    continue
+            if not title:
+                skipped_count += 1
+                continue
 
-                # Search movie on TMDB
-                search_results = tmdb_request(
-                    "/search/movie", {"query": title})
+            # Search movie on TMDB
+            search_query = f"{title} {year}" if year else title
+            search_results = tmdb_request("/search/movie", {"query": search_query})
 
-                if search_results and search_results.get('results'):
-                    movie = search_results['results'][0]
-                    movie_id = movie['id']
+            if not search_results or not search_results.get('results'):
+                skipped_count += 1
+                continue
 
-                    # Find or create movie item
-                    movie_item = db.query(MovieItem).filter(
-                        MovieItem.tmdb_id == movie_id).first()
-                    if not movie_item:
-                        movie_item = MovieItem(
-                            tmdb_id=movie_id,
-                            title=movie['title'],
-                            poster_path=movie.get('poster_path')
-                        )
-                        db.add(movie_item)
-                        db.commit()
-                        db.refresh(movie_item)
+            # Take first result
+            movie = search_results['results'][0]
+            movie_id = movie['id']
 
-                    # Check if already exists
-                    existing = db.query(UserMovie).filter(
-                        UserMovie.user_id == user.id,
-                        UserMovie.movie_id == movie_item.id,
-                        UserMovie.status == status,
-                        UserMovie.custom_list_id == custom_list_id
-                    ).first()
+            # Find or create movie item
+            movie_item = db.query(MovieItem).filter(MovieItem.tmdb_id == movie_id).first()
+            if not movie_item:
+                movie_item = MovieItem(
+                    tmdb_id=movie_id,
+                    title=movie['title'],
+                    poster_path=movie.get('poster_path')
+                )
+                db.add(movie_item)
+                db.flush()  # Flush zonder commit voor snelheid
 
-                    if not existing:
-                        user_movie = UserMovie(
-                            user_id=user.id,
-                            movie_id=movie_item.id,
-                            status=status,
-                            custom_list_id=custom_list_id
-                        )
-                        db.add(user_movie)
-                        imported_count += 1
+            # Check if already exists
+            existing = db.query(UserMovie).filter(
+                UserMovie.user_id == user.id,
+                UserMovie.movie_id == movie_item.id,
+                UserMovie.status == status,
+                UserMovie.custom_list_id == custom_list_id
+            ).first()
+
+            if not existing:
+                user_movie = UserMovie(
+                    user_id=user.id,
+                    movie_id=movie_item.id,
+                    status=status,
+                    custom_list_id=custom_list_id
+                )
+                db.add(user_movie)
+                imported_count += 1
+            else:
+                skipped_count += 1
+
+            # Batch commit elke 20 items
+            batch_count += 1
+            if batch_count >= batch_size:
+                db.commit()
+                batch_count = 0
 
         except Exception as e:
-            errors.append(f"Error importing {row}: {str(e)}")
+            error_count += 1
+            print(f"Error importing '{title}': {str(e)}")
             continue
 
+    # Final commit voor resterende items
     db.commit()
+
+    # Build success message
+    message = f"{imported_count} films geïmporteerd"
+    if skipped_count > 0:
+        message += f", {skipped_count} overgeslagen"
+    if error_count > 0:
+        message += f", {error_count} errors"
 
     # Redirect back with success message
     if custom_list_id:
-        return RedirectResponse(url=f"/lists/{custom_list_id}?imported={imported_count}", status_code=303)
+        return RedirectResponse(url=f"/lists/{custom_list_id}?msg={message}", status_code=303)
     else:
-        return RedirectResponse(url=f"/profile?imported={imported_count}", status_code=303)
+        return RedirectResponse(url=f"/profile?msg={message}", status_code=303)
 
 
 if __name__ == "__main__":

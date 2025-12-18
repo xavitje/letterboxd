@@ -85,10 +85,14 @@
 
             <!-- Submit -->
             <button type="submit"
+                    id="importBtn"
+                    onclick="this.disabled=true; this.innerHTML='⏳ Bezig met importeren...'; this.form.submit();"
                     class="w-full bg-accent hover:bg-green-600 text-white py-4 rounded-md font-medium text-lg transition-colors">
                 📥 Importeer Films
             </button>
-        </form>
+            <p class="text-gray-400 text-sm text-center mt-2">
+                ⚠️ Grote lijsten kunnen enkele minuten duren. Maximum: 1000 films.
+            </p>
     </div>
 
     <!-- Instructions -->
