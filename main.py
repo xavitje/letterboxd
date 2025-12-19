@@ -71,7 +71,41 @@ async def home(request: Request, db: Session = Depends(get_db)):
         "image_base_url": TMDB_IMAGE_BASE_URL
     })
 
-
+@app.get("/sitemap.xml")
+async def sitemap(db: Session = Depends(get_db)):
+    base_url = "https://movie.drissi.store"
+    
+    # 1. Statische pagina's
+    static_pages = ["/", "/search", "/login", "/register"]
+    
+    # 2. Dynamische pagina's (alle films uit je database)
+    movies = db.query(MovieItem).all()
+    
+    xml_content = '<?xml version="1.0" encoding="UTF-8"?>'
+    xml_content += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+    
+    # Statische URLs toevoegen
+    for page in static_pages:
+        xml_content += f"""
+        <url>
+            <loc>{base_url}{page}</loc>
+            <changefreq>daily</changefreq>
+            <priority>0.8</priority>
+        </url>"""
+    
+    # Film detail pagina's toevoegen
+    for movie in movies:
+        xml_content += f"""
+        <url>
+            <loc>{base_url}/movie/{movie.tmdb_id}</loc>
+            <changefreq>weekly</changefreq>
+            <priority>0.6</priority>
+        </url>"""
+        
+    xml_content += "</urlset>"
+    
+    return Response(content=xml_content, media_type="application/xml")
+    
 # Search & Filter Page
 @app.get("/search", response_class=HTMLResponse)
 async def search_page(
