@@ -16,7 +16,7 @@ Een moderne film tracking webapplicatie gebouwd met FastAPI, SQLAlchemy en Tailw
 ### 1. Clone de repository en navigeer naar de folder
 
 ```bash
-cd Letterbox
+cd MovieSpace
 ```
 
 ### 2. Installeer de dependencies
@@ -65,7 +65,7 @@ Ga naar [http://localhost:8000](http://localhost:8000) in je browser.
 ## 📁 Projectstructuur
 
 ```
-Letterbox/
+MovieSpace/
 │
 ├── main.py                 # FastAPI applicatie en routes
 ├── models.py              # SQLAlchemy database modellen
